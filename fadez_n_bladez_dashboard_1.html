@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black" />
+<title>Fadez N' Bladez — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root {
+  --gold: #c9a84c;
+  --gold-dim: #c9a84c55;
+  --gold-faint: #c9a84c18;
+  --black: #080808;
+  --surface: #111111;
+  --surface2: #181818;
+  --border: #c9a84c22;
+  --text: #e8d5a3;
+  --text-dim: #c9a84c88;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--black); color: var(--text); font-family: 'Jost', sans-serif; min-height: 100vh; }
+
+.header {
+  padding: 24px 20px 16px;
+  border-bottom: 0.5px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.header-title { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 700; color: var(--gold); letter-spacing: 2px; text-transform: uppercase; }
+.header-sub { font-size: 10px; color: var(--text-dim); letter-spacing: 3px; text-transform: uppercase; margin-top: 3px; }
+.refresh-btn {
+  background: var(--gold-faint); border: 0.5px solid var(--gold-dim);
+  color: var(--gold); padding: 8px 16px; border-radius: 6px;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  cursor: pointer; font-family: 'Jost', sans-serif;
+}
+
+.loading { text-align: center; padding: 60px 20px; color: var(--text-dim); font-size: 13px; letter-spacing: 2px; }
+.loading-dot { display: inline-block; animation: pulse 1.4s ease-in-out infinite; }
+.loading-dot:nth-child(2) { animation-delay: 0.2s; }
+.loading-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes pulse { 0%,80%,100%{opacity:0.2} 40%{opacity:1} }
+
+.content { padding: 20px; max-width: 600px; margin: 0 auto; }
+
+.filter-tabs { display: flex; gap: 8px; margin-bottom: 24px; overflow-x: auto; padding-bottom: 4px; }
+.filter-tab {
+  padding: 8px 16px; border-radius: 20px;
+  border: 0.5px solid var(--border);
+  background: transparent; color: var(--text-dim);
+  font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+  cursor: pointer; white-space: nowrap; font-family: 'Jost', sans-serif;
+}
+.filter-tab.active { background: var(--gold); color: var(--black); border-color: var(--gold); font-weight: 500; }
+
+.kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+.kpi-card {
+  background: var(--surface); border: 0.5px solid var(--border);
+  border-radius: 14px; padding: 18px 16px;
+  position: relative; overflow: hidden;
+}
+.kpi-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+.kpi-card.revenue::before { background: linear-gradient(90deg, transparent, #2ecc71, transparent); }
+.kpi-label { font-size: 9px; color: var(--text-dim); letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 10px; }
+.kpi-value { font-family: 'Cormorant Garamond', serif; font-size: 36px; font-weight: 700; color: var(--gold); line-height: 1; }
+.kpi-card.revenue .kpi-value { color: #2ecc71; font-size: 30px; }
+.kpi-sub { font-size: 10px; color: var(--text-dim); margin-top: 6px; }
+.kpi-icon { position: absolute; top: 14px; right: 14px; font-size: 18px; opacity: 0.4; }
+
+.section-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 16px; color: var(--gold); letter-spacing: 2px;
+  text-transform: uppercase; margin-bottom: 14px;
+  padding-bottom: 8px; border-bottom: 0.5px solid var(--border);
+}
+
+.chart-card {
+  background: var(--surface); border: 0.5px solid var(--border);
+  border-radius: 14px; padding: 20px; margin-bottom: 16px;
+}
+
+.split-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.split-label { font-size: 11px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; width: 90px; flex-shrink: 0; }
+.split-bar-bg { flex: 1; height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+.split-bar-fill { height: 100%; border-radius: 4px; background: var(--gold); transition: width 1s ease; }
+.split-bar-fill.alt { background: #4a7fcb; }
+.split-bar-fill.green { background: #2ecc71; }
+.split-pct { font-size: 12px; color: var(--gold); font-weight: 500; width: 36px; text-align: right; flex-shrink: 0; }
+
+.recent-table { width: 100%; border-collapse: collapse; }
+.recent-table th { font-size: 9px; color: var(--text-dim); letter-spacing: 2px; text-transform: uppercase; padding: 8px 4px; border-bottom: 0.5px solid var(--border); text-align: left; }
+.recent-table td { font-size: 12px; color: var(--text); padding: 10px 4px; border-bottom: 0.5px solid var(--border); }
+.recent-table tr:last-child td { border-bottom: none; }
+.badge-walkin { background: var(--gold-faint); color: var(--gold); border: 0.5px solid var(--gold-dim); padding: 2px 8px; border-radius: 10px; font-size: 9px; letter-spacing: 1px; }
+.badge-appt { background: #4a7fcb18; color: #4a7fcb; border: 0.5px solid #4a7fcb55; padding: 2px 8px; border-radius: 10px; font-size: 9px; letter-spacing: 1px; }
+.revenue-val { color: #2ecc71; font-weight: 500; }
+
+.last-updated { text-align: center; font-size: 10px; color: var(--text-dim); letter-spacing: 1px; padding: 20px; opacity: 0.6; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title">Fadez N' Bladez</div>
+    <div class="header-sub">Shop Dashboard</div>
+  </div>
+  <button class="refresh-btn" onclick="loadData()">↻ Refresh</button>
+</div>
+
+<div id="loading" class="loading">
+  <div style="margin-bottom:12px; font-size:18px;">✂</div>
+  Loading<span class="loading-dot">.</span><span class="loading-dot">.</span><span class="loading-dot">.</span>
+</div>
+
+<div id="main" style="display:none;">
+  <div class="content">
+
+    <div class="filter-tabs">
+      <button class="filter-tab active" onclick="setFilter('all', this)">All Time</button>
+      <button class="filter-tab" onclick="setFilter('today', this)">Today</button>
+      <button class="filter-tab" onclick="setFilter('week', this)">This Week</button>
+      <button class="filter-tab" onclick="setFilter('month', this)">This Month</button>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-icon">👥</div>
+        <div class="kpi-label">Check-Ins</div>
+        <div class="kpi-value" id="kpi-checkins">—</div>
+        <div class="kpi-sub">customers</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon">✂</div>
+        <div class="kpi-label">Total Cuts</div>
+        <div class="kpi-value" id="kpi-cuts">—</div>
+        <div class="kpi-sub" id="kpi-cuts-sub">services</div>
+      </div>
+      <div class="kpi-card revenue">
+        <div class="kpi-icon">💰</div>
+        <div class="kpi-label">Est. Revenue</div>
+        <div class="kpi-value" id="kpi-revenue">—</div>
+        <div class="kpi-sub">@ $25 per cut</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon">🎁</div>
+        <div class="kpi-label">Giveaway</div>
+        <div class="kpi-value" id="kpi-giveaway">—</div>
+        <div class="kpi-sub">opted in</div>
+      </div>
+    </div>
+
+    <!-- Revenue breakdown -->
+    <div class="section-title">Revenue Breakdown</div>
+    <div class="chart-card">
+      <div style="display:flex; gap:12px; margin-bottom:16px;">
+        <div style="flex:1; background:var(--surface2); border-radius:10px; padding:14px; text-align:center;">
+          <div style="font-size:9px; color:var(--text-dim); letter-spacing:2px; text-transform:uppercase; margin-bottom:6px;">Walk-In Rev</div>
+          <div style="font-family:'Cormorant Garamond',serif; font-size:22px; color:#2ecc71;" id="rev-walkin">—</div>
+        </div>
+        <div style="flex:1; background:var(--surface2); border-radius:10px; padding:14px; text-align:center;">
+          <div style="font-size:9px; color:var(--text-dim); letter-spacing:2px; text-transform:uppercase; margin-bottom:6px;">Appt Rev</div>
+          <div style="font-family:'Cormorant Garamond',serif; font-size:22px; color:#2ecc71;" id="rev-appt">—</div>
+        </div>
+        <div style="flex:1; background:var(--surface2); border-radius:10px; padding:14px; text-align:center;">
+          <div style="font-size:9px; color:var(--text-dim); letter-spacing:2px; text-transform:uppercase; margin-bottom:6px;">Avg / Visit</div>
+          <div style="font-family:'Cormorant Garamond',serif; font-size:22px; color:#2ecc71;" id="rev-avg">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Traffic chart -->
+    <div class="section-title">Daily Traffic</div>
+    <div class="chart-card">
+      <canvas id="trafficChart" height="180"></canvas>
+    </div>
+
+    <!-- Split -->
+    <div class="section-title">Visit Breakdown</div>
+    <div class="chart-card">
+      <div class="split-row">
+        <div class="split-label">Walk-In</div>
+        <div class="split-bar-bg"><div class="split-bar-fill" id="bar-walkin" style="width:0%"></div></div>
+        <div class="split-pct" id="pct-walkin">—</div>
+      </div>
+      <div class="split-row">
+        <div class="split-label">Appointment</div>
+        <div class="split-bar-bg"><div class="split-bar-fill alt" id="bar-appt" style="width:0%"></div></div>
+        <div class="split-pct" id="pct-appt">—</div>
+      </div>
+      <div class="split-row" style="margin-bottom:0;">
+        <div class="split-label">Giveaway</div>
+        <div class="split-bar-bg"><div class="split-bar-fill green" id="bar-giveaway" style="width:0%"></div></div>
+        <div class="split-pct" id="pct-giveaway">—</div>
+      </div>
+    </div>
+
+    <!-- Recent -->
+    <div class="section-title">Recent Check-Ins</div>
+    <div class="chart-card" style="overflow-x:auto;">
+      <table class="recent-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Cuts</th>
+            <th>Rev</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody id="recent-body"></tbody>
+      </table>
+    </div>
+
+  </div>
+  <div class="last-updated" id="last-updated"></div>
+</div>
+
+<script>
+const SHEET_ID = '1YHu30Ol9CKN5tja7vYRRwakONlgEafqIwho2JhOGeC4';
+const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+const RATE = 25;
+
+let allData = [];
+let currentFilter = 'all';
+let trafficChart = null;
+
+function parseDate(raw) {
+  if (!raw) return null;
+  // Handle Google Sheets date format: "Date(2026,3,21,8,32,0)"
+  const m = String(raw).match(/Date\((\d+),(\d+),(\d+)(?:,(\d+),(\d+),(\d+))?\)/);
+  if (m) return new Date(+m[1], +m[2], +m[3], +(m[4]||0), +(m[5]||0), +(m[6]||0));
+  // Try plain string parse
+  const d = new Date(raw);
+  return isNaN(d) ? null : d;
+}
+
+function formatDate(d) {
+  if (!d) return '—';
+  return d.toLocaleDateString('en-US', {month:'short', day:'numeric'}) + ' ' +
+    d.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'});
+}
+
+async function loadData() {
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('main').style.display = 'none';
+  try {
+    const res = await fetch(SHEET_URL);
+    const text = await res.text();
+    const json = JSON.parse(text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/)[1]);
+    const rows = json.table.rows || [];
+
+    allData = rows.map(row => {
+      const c = row.c;
+      return {
+        timestamp: parseDate(c[0]?.v),
+        name: c[1]?.v || '',
+        phone: c[2]?.v || '',
+        visitType: c[3]?.v || 'Walk-In',
+        cuts: parseInt(c[4]?.v) || 1,
+        giveaway: c[5]?.v || 'No'
+      };
+    }).filter(r => r.name);
+
+    renderDashboard();
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('main').style.display = 'block';
+    document.getElementById('last-updated').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
+  } catch(e) {
+    document.getElementById('loading').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-dim)">⚠️ Could not load data.<br><small>Make sure your sheet is set to Anyone with link can view</small></div>';
+  }
+}
+
+function filterData() {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const weekAgo = new Date(today); weekAgo.setDate(today.getDate() - 7);
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  return allData.filter(r => {
+    if (!r.timestamp) return true;
+    if (currentFilter === 'today') return r.timestamp >= today;
+    if (currentFilter === 'week') return r.timestamp >= weekAgo;
+    if (currentFilter === 'month') return r.timestamp >= monthStart;
+    return true;
+  });
+}
+
+function fmt(n) { return '$' + n.toLocaleString(); }
+
+function renderDashboard() {
+  const data = filterData();
+  const total = data.length;
+  const totalCuts = data.reduce((s,r) => s + r.cuts, 0);
+  const appts = data.filter(r => r.visitType === 'Appointment');
+  const walkIns = data.filter(r => r.visitType === 'Walk-In');
+  const giveawayYes = data.filter(r => r.giveaway === 'Yes').length;
+
+  const totalRev = totalCuts * RATE;
+  const walkInRev = walkIns.reduce((s,r) => s + r.cuts * RATE, 0);
+  const apptRev = appts.reduce((s,r) => s + r.cuts * RATE, 0);
+  const avgRev = total ? (totalRev / total).toFixed(0) : 0;
+
+  document.getElementById('kpi-checkins').textContent = total;
+  document.getElementById('kpi-cuts').textContent = totalCuts;
+  document.getElementById('kpi-revenue').textContent = fmt(totalRev);
+  document.getElementById('kpi-giveaway').textContent = giveawayYes;
+  document.getElementById('kpi-cuts-sub').textContent = total ? `avg ${(totalCuts/total).toFixed(1)} per visit` : 'services';
+
+  document.getElementById('rev-walkin').textContent = fmt(walkInRev);
+  document.getElementById('rev-appt').textContent = fmt(apptRev);
+  document.getElementById('rev-avg').textContent = fmt(+avgRev);
+
+  const wiPct = total ? Math.round(walkIns.length/total*100) : 0;
+  const apPct = total ? Math.round(appts.length/total*100) : 0;
+  const gvPct = total ? Math.round(giveawayYes/total*100) : 0;
+  setTimeout(() => {
+    document.getElementById('bar-walkin').style.width = wiPct + '%';
+    document.getElementById('bar-appt').style.width = apPct + '%';
+    document.getElementById('bar-giveaway').style.width = gvPct + '%';
+  }, 100);
+  document.getElementById('pct-walkin').textContent = wiPct + '%';
+  document.getElementById('pct-appt').textContent = apPct + '%';
+  document.getElementById('pct-giveaway').textContent = gvPct + '%';
+
+  buildTrafficChart(data);
+
+  const recent = [...data].reverse().slice(0, 10);
+  const tbody = document.getElementById('recent-body');
+  if (!recent.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="color:var(--text-dim);text-align:center;padding:20px;">No data yet</td></tr>';
+  } else {
+    tbody.innerHTML = recent.map(r => {
+      const rev = r.cuts * RATE;
+      const typeBadge = r.visitType === 'Walk-In'
+        ? `<span class="badge-walkin">Walk-In</span>`
+        : `<span class="badge-appt">Appt</span>`;
+      return `<tr>
+        <td>${r.name}</td>
+        <td>${typeBadge}</td>
+        <td>${r.cuts}</td>
+        <td class="revenue-val">${fmt(rev)}</td>
+        <td style="font-size:10px;color:var(--text-dim)">${formatDate(r.timestamp)}</td>
+      </tr>`;
+    }).join('');
+  }
+}
+
+function buildTrafficChart(data) {
+  const days = 14;
+  const labels = [], counts = [], revs = [];
+  for (let i = days-1; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    labels.push(d.toLocaleDateString('en-US', {month:'short', day:'numeric'}));
+    const s = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const e = new Date(s); e.setDate(e.getDate()+1);
+    const dd = data.filter(r => r.timestamp && r.timestamp >= s && r.timestamp < e);
+    counts.push(dd.length);
+    revs.push(dd.reduce((s,r) => s + r.cuts * RATE, 0));
+  }
+  if (trafficChart) trafficChart.destroy();
+  const ctx = document.getElementById('trafficChart').getContext('2d');
+  trafficChart = new Chart(ctx, {
+    data: {
+      labels,
+      datasets: [
+        { type:'bar', label:'Check-Ins', data:counts, backgroundColor:'#c9a84c88', borderColor:'#c9a84c', borderWidth:1, borderRadius:4, yAxisID:'y' },
+        { type:'line', label:'Revenue $', data:revs, borderColor:'#2ecc71', backgroundColor:'#2ecc7122', tension:0.4, pointBackgroundColor:'#2ecc71', pointRadius:3, yAxisID:'y2' }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { color:'#c9a84c88', font:{size:10}, boxWidth:12 } } },
+      scales: {
+        x: { ticks:{color:'#c9a84c66', font:{size:9}, maxRotation:45}, grid:{color:'#c9a84c11'} },
+        y: { ticks:{color:'#c9a84c66', font:{size:10}, stepSize:1}, grid:{color:'#c9a84c11'}, beginAtZero:true, position:'left' },
+        y2: { ticks:{color:'#2ecc7166', font:{size:10}, callback: v => '$'+v}, grid:{display:false}, beginAtZero:true, position:'right' }
+      }
+    }
+  });
+}
+
+function setFilter(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderDashboard();
+}
+
+loadData();
+setInterval(loadData, 120000);
+</script>
+</body>
+</html>
