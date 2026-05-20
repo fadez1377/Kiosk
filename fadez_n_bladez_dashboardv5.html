@@ -314,7 +314,10 @@ async function loadData() {
 function filterData() {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const weekAgo = new Date(today); weekAgo.setDate(today.getDate() - 7);
+  // Week runs Sunday to Saturday
+  const dayOfWeek = now.getDay(); // 0=Sun, 6=Sat
+  const weekStart = new Date(today); weekStart.setDate(today.getDate() - dayOfWeek);
+  const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6); weekEnd.setHours(23,59,59,999);
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   return allData.filter(r => {
     if (!r.timestamp) return true;
