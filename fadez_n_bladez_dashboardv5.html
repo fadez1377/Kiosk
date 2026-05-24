@@ -282,17 +282,21 @@ async function loadData() {
 
     allData = rows.map(row => {
       const c = row.c;
-      // Detect old format (no barber col) vs new format (barber in col E)
-      const col4val = String(c[4]?.v || '');
-      const hasBarber = col4val && isNaN(Number(col4val)) && col4val.length < 20;
+      const col4val = String(c[4]?.v ?? '');
+      const col5val = String(c[5]?.v ?? '');
+      const isNameLike = v => v && isNaN(Number(v)) && v.length < 30 && !['yes','no'].includes(v.toLowerCase());
+      // Barber at col4: col4 is a name-like string (new format A)
+      const barberAtCol4 = isNameLike(col4val);
+      // Barber at col5: col4 is numeric, col5 is a name-like string (new format B)
+      const barberAtCol5 = !barberAtCol4 && isNameLike(col5val);
       return {
         timestamp: parseDate(c[0]?.v),
         name: c[1]?.v || '',
         phone: c[2]?.v || '',
         visitType: normalizeVisit(c[3]?.v),
-        barber: hasBarber ? col4val : 'N/A',
-        cuts: hasBarber ? (parseInt(c[5]?.v) || 1) : (parseInt(c[4]?.v) || 1),
-        giveaway: hasBarber ? (c[6]?.v || 'No') : (c[5]?.v || 'No')
+        barber: barberAtCol4 ? col4val : (barberAtCol5 ? col5val : 'N/A'),
+        cuts: barberAtCol4 ? (parseInt(c[5]?.v) || 1) : (parseInt(c[4]?.v) || 1),
+        giveaway: barberAtCol4 ? (c[6]?.v || 'No') : (barberAtCol5 ? (c[6]?.v || 'No') : (c[5]?.v || 'No'))
       };
     }).filter(r => r.name);
 
